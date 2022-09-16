@@ -201,7 +201,7 @@ contract NFTMarketPlace is
     error AmountMustBeGreaterThanZero();
     error InvaildPaymentToken();
     error AddressExistsInWhitelist();
-    error FeePercentMustBeA1To100Number();
+    error FeePercentMustBeA1To1000Number();
     error OnlyAcceptEthForPayment();
     error OnlyAcceptVegasONEForPayment();
     error OnlyRemovedBySellerOrAdmin();
@@ -234,7 +234,7 @@ contract NFTMarketPlace is
         }
 
         if (newFeePercent <= 0 || newFeePercent > thousand) {
-            revert FeePercentMustBeA1To100Number();
+            revert FeePercentMustBeA1To1000Number();
         }
 
         _paymentToken = IERC20Upgradeable(newPaymentToken);
@@ -319,7 +319,7 @@ contract NFTMarketPlace is
 
     function setFeePercent(uint256 newFeePercent) external checkAdmin {
         if (newFeePercent <= 0 || newFeePercent > thousand) {
-            revert FeePercentMustBeA1To100Number();
+            revert FeePercentMustBeA1To1000Number();
         }
         _feePercent = newFeePercent;
         
@@ -920,6 +920,10 @@ contract NFTMarketPlace is
         return _ownedItems[seller].length;
     }
 
+    function marketItemCount() external view returns (uint256) {
+        return _items.length;
+    }
+    
     function getAuctionItem(uint256 itemId)
         external
         checkAuctionItemExist(itemId)
@@ -970,6 +974,10 @@ contract NFTMarketPlace is
 
     function auctionItemCountOf(address seller) external view returns (uint256) {
         return _ownedAuctionItems[seller].length;
+    }
+
+    function auctionItemCount() external view returns (uint256) {
+        return _auctionItems.length;
     }
 
     function drawableMPEth() external checkAdmin view returns (uint256) {
