@@ -221,7 +221,7 @@ contract NFTMarketPlace is
     error AuctionIsNotOver();
     error NoOneBid();
     error OnlyHighestBidderOrSellerCanEnd();
-    error outOfBounds();
+    error OutOfBounds();
 
     /**
      * Initialize
@@ -302,6 +302,14 @@ contract NFTMarketPlace is
         MarketItem memory item = _getItem(itemId);
         if (item.seller == _msgSender()) {
             revert SelfPurchase();
+        }
+        _;
+    }
+
+    /// @dev A modifier which asserts that the perPage & pageId greater than zero.
+    modifier checkPage(uint256 perPage, uint256 pageId) {
+        if (perPage <= 0 || pageId <= 0) {
+            revert OutOfBounds();
         }
         _;
     }
@@ -1076,6 +1084,7 @@ contract NFTMarketPlace is
     /// @return list of market item details.
     function listMarketItem(uint256 perPage, uint256 pageId) 
         external 
+        checkPage(perPage, pageId)
         view 
         returns (MarketItem[] memory) 
     {
@@ -1085,7 +1094,7 @@ contract NFTMarketPlace is
         if (_items.length > (perPage * (pageId - 1))) {
             startId = _items.length - (perPage * (pageId - 1));
         } else {
-            revert outOfBounds();
+            revert OutOfBounds();
         }
 
         if (startId > perPage) {
@@ -1112,6 +1121,7 @@ contract NFTMarketPlace is
     /// @return list of market item details owned by the address.
     function listMarketItemOf(address seller, uint256 perPage, uint256 pageId)
         external
+        checkPage(perPage, pageId)
         view
         returns (MarketItem[] memory)
     {
@@ -1120,25 +1130,28 @@ contract NFTMarketPlace is
         uint256 itemId;
         uint256 counter = 0;
         if (_ownedItems[seller].length > (perPage * (pageId - 1))) {
-            startId = _ownedItems[seller].length - (perPage * (pageId - 1));
+            startId = _ownedItems[seller].length - 1 - (perPage * (pageId - 1));
         } else {
-            revert outOfBounds();
+            revert OutOfBounds();
         }
 
-        if (startId > perPage) {
-            endId = startId - perPage;
+        if (startId + 1 > perPage) {
+            endId = startId - perPage + 1;
         } else {
-            endId = 1;
+            endId = 0;
         }
         
         MarketItem[] memory ret = new MarketItem[](startId - endId + 1);
 
-        for (uint256 i = startId; i >= endId ; i--) {
-            itemId = _ownedItems[seller][i - 1];
+        for (uint256 i = startId; i >= endId; i--) {
+            itemId = _ownedItems[seller][i];
             ret[counter] = _getItem(itemId);
             counter++;
+            if (i == endId) {
+                break;
+            }
         }
-
+        
         return ret;
     }
 
@@ -1180,6 +1193,7 @@ contract NFTMarketPlace is
     /// @return list of auction item details.
     function listAuctionItem(uint256 perPage, uint256 pageId) 
         external 
+        checkPage(perPage, pageId)
         view 
         returns (AuctionItem[] memory)
     {
@@ -1189,7 +1203,7 @@ contract NFTMarketPlace is
         if (_auctionItems.length > (perPage * (pageId - 1))) {
             startId = _auctionItems.length - (perPage * (pageId - 1));
         } else {
-            revert outOfBounds();
+            revert OutOfBounds();
         }
 
         if (startId > perPage) {
@@ -1216,6 +1230,7 @@ contract NFTMarketPlace is
     /// @return list of auction item details owned by the address.
     function listAuctionItemOf(address seller, uint256 perPage, uint256 pageId)
         external
+        checkPage(perPage, pageId)
         view
         returns (AuctionItem[] memory)
     {
@@ -1224,23 +1239,26 @@ contract NFTMarketPlace is
         uint256 itemId;
         uint256 counter = 0;
         if (_ownedAuctionItems[seller].length > (perPage * (pageId - 1))) {
-            startId = _ownedAuctionItems[seller].length - (perPage * (pageId - 1));
+            startId = _ownedAuctionItems[seller].length - (perPage * (pageId - 1)) - 1;
         } else {
-            revert outOfBounds();
+            revert OutOfBounds();
         }
 
-        if (startId > perPage) {
-            endId = startId - perPage;
+        if (startId + 1 > perPage) {
+            endId = startId - perPage + 1;
         } else {
-            endId = 1;
+            endId = 0;
         }
         
         AuctionItem[] memory ret = new AuctionItem[](startId - endId + 1);
 
         for (uint256 i = startId; i >= endId ; i--) {
-            itemId = _ownedAuctionItems[seller][i - 1];
+            itemId = _ownedAuctionItems[seller][i];
             ret[counter] = _getAuctionItem(itemId);
             counter++;
+            if (i == endId) {
+                break;
+            }
         }
         
         return ret;
