@@ -12,10 +12,10 @@ The following are explanations for some user scenarios and the contract function
 
 - Listing process
 
-Only NFTs of whitelisted contracts can be listed as a market item; only the item seller or administrators can remove items.
+Only NFTs of whitelisted contracts can be listed as a market item; only the item seller or administrators can cancel the sale.
 The relative methods are `createMarketItem`, `createAuctionItem`, `removeMarketItem`,  and `removeAuctionItem`.
 
-</br>
+<br />
 
 - Buying Process
 
@@ -24,7 +24,7 @@ The NFT will be transferred from the contract to the buyer as the fee will be tr
 
 The relative methods are `buyE`, `buyV`, `withdrawEth`, and `withdrawVegasONE`.
 
-</br>
+<br />
 
 - Auction Process
 
@@ -36,7 +36,7 @@ Funds from non-highest bidders can then be withdrawn.
 
 The relative methods are `bidE`, `bidV`, `withdrawEth`, `withdrawVegasONE`, `revertBidEth`, and `revertBidVegasONE`.
 
-</br>
+<br />
 
 ## Function Description
 
@@ -44,7 +44,7 @@ The relative methods are `bidE`, `bidV`, `withdrawEth`, `withdrawVegasONE`, `rev
 
 After the auction time expires, this function can be executed by the seller or the highest bidder to move on to the subsequent transaction procedures.
 
-</br>
+<br />
 
 - bidE
 
@@ -52,7 +52,7 @@ For auction items.
 Bidders enter the itemId of the auction item and bid with Eth as the transaction currency.
 If the bidder has already bid on the same item, increase the bid on top of the previous bid.
 
-</br>
+<br />
 
 - bidV
 
@@ -60,95 +60,95 @@ For auction items.
 Bidders enter the itemId of the auction item and bid with VegasONE as the transaction currency.
 If the bidder has already bid on the same item, increase the bid on top of the previous bid.
 
-</br>
+<br />
 
 - buyE
 
 For market item.
 Buyers need to enter the itemId of the market item to buy the item with Eth as payment.
 
-</br>
+<br />
 
 - buyV
 
 For market item.
 Buyers need to enter the itemId of the market item to buy the item with VegasONE as payment.
 
-</br>
+<br />
 
 - createAuctionItem
 
 To create an auction item, a seller needs to assign the NFT contract address, the NFT tokenId, and a transactional currency (either Eth or VegasONE). The auction will last for a number of days set by the administrator.
 
-</br>
+<br />
 
 - createMarketItem
 
 To create a market item, a seller needs to assign the NFT contract address, the NFT tokenId, a desirable selling price, and a transactional currency (either Eth or VegasONE).
 
-</br>
+<br />
 
 - removeAuctionItem
 
 For sellers and administrators only, available when no one bids.
-Enter itemId to remove the auction item.
+Enter itemId to cancel the auction item.
 
-</br>
+<br />
 
 - removeMarketItem
 
 For sellers and administrators only.
-Enter itemId to remove the market item.
+Enter itemId to cancel the market item.
 
-</br>
+<br />
 
 - revertBidEth
 
 For non-highest bidders only, withdraw the caller's bidding Eth amount for the auction item to the assigned address.
 
-</br>
+<br />
 
 - revertBidVegasONE
 
 For non-highest bidders only, withdraw the caller's bidding VegasONE amount for the auction item to the assigned address.
 
-</br>
+<br />
 
 - withdrawEth
 
 Withdraws the caller's Eth balance within the contract to the assigned address.
 
-</br>
+<br />
 
 - withdrawVegasONE
 
 Withdraws the caller's VegasONE balance within the contract to the assigned address.
 
-</br>
+<br />
 
 - setBiddingTime **onlyAdmin**
 
 Sets the auction duration.
 
-</br>
+<br />
 
 - setFeePercent **onlyAdmin**
 
 Sets the transaction fee percentage.
 
-</br>
+<br />
 
 - setWhitelist **onlyAdmin**
 
 Adds a trusted NFT contract to the whitelist.
 
-</br>
+<br />
 
 - withdrawMPEth **onlyAdmin**
 
 Withdraws the Eth net profit within the contract to the assigned address.
 
-</br>
+<br />
 
 - withdrawMPVegasONE **onlyAdmin**
 
