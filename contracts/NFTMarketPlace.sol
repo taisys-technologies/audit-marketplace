@@ -1091,8 +1091,13 @@ contract NFTMarketPlace is
         uint256 startId;
         uint256 endId;
         uint256 counter = 0;
+
+        MarketItem[] memory ret;
+
         if (_items.length > (perPage * (pageId - 1))) {
             startId = _items.length - (perPage * (pageId - 1));
+        } else if (_items.length == 0) {
+            return ret;
         } else {
             revert OutOfBounds();
         }
@@ -1103,7 +1108,7 @@ contract NFTMarketPlace is
             endId = 1;
         }
 
-        MarketItem[] memory ret = new MarketItem[](startId - endId + 1);
+        ret = new MarketItem[](startId - endId + 1);
 
         for (uint256 i = startId; i >= endId ; i--) {
             ret[counter] = _getItem(i);
@@ -1129,8 +1134,13 @@ contract NFTMarketPlace is
         uint256 endId;
         uint256 itemId;
         uint256 counter = 0;
+
+        MarketItem[] memory ret;
+
         if (_ownedItems[seller].length > (perPage * (pageId - 1))) {
             startId = _ownedItems[seller].length - 1 - (perPage * (pageId - 1));
+        } else if (_ownedItems[seller].length == 0) {
+            return ret;
         } else {
             revert OutOfBounds();
         }
@@ -1141,7 +1151,7 @@ contract NFTMarketPlace is
             endId = 0;
         }
         
-        MarketItem[] memory ret = new MarketItem[](startId - endId + 1);
+        ret = new MarketItem[](startId - endId + 1);
 
         for (uint256 i = startId; i >= endId; i--) {
             itemId = _ownedItems[seller][i];
@@ -1200,8 +1210,13 @@ contract NFTMarketPlace is
         uint256 startId;
         uint256 endId;
         uint256 counter = 0;
+
+        AuctionItem[] memory ret;
+
         if (_auctionItems.length > (perPage * (pageId - 1))) {
             startId = _auctionItems.length - (perPage * (pageId - 1));
+        } else if (_auctionItems.length == 0) {
+            return ret;
         } else {
             revert OutOfBounds();
         }
@@ -1212,7 +1227,7 @@ contract NFTMarketPlace is
             endId = 1;
         }
 
-        AuctionItem[] memory ret = new AuctionItem[](startId - endId + 1);
+        ret = new AuctionItem[](startId - endId + 1);
 
         for (uint256 i = startId; i >= endId ; i--) {
             ret[counter] = _getAuctionItem(i);
@@ -1238,8 +1253,13 @@ contract NFTMarketPlace is
         uint256 endId;
         uint256 itemId;
         uint256 counter = 0;
+
+        AuctionItem[] memory ret;
+
         if (_ownedAuctionItems[seller].length > (perPage * (pageId - 1))) {
             startId = _ownedAuctionItems[seller].length - (perPage * (pageId - 1)) - 1;
+        } else if (_ownedAuctionItems[seller].length == 0) {
+            return ret;
         } else {
             revert OutOfBounds();
         }
@@ -1250,7 +1270,7 @@ contract NFTMarketPlace is
             endId = 0;
         }
         
-        AuctionItem[] memory ret = new AuctionItem[](startId - endId + 1);
+        ret = new AuctionItem[](startId - endId + 1);
 
         for (uint256 i = startId; i >= endId ; i--) {
             itemId = _ownedAuctionItems[seller][i];
