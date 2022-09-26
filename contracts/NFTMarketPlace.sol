@@ -28,6 +28,7 @@ contract NFTMarketPlace is
 
     struct MarketItem {
         bool isVegasONE;
+        bool soldOut;
         address nftContract;
         address seller;
         uint256 itemId;
@@ -37,6 +38,7 @@ contract NFTMarketPlace is
 
     struct AuctionItem {
         bool isVegasONE;
+        bool soldOut;
         address nftContract;
         address highestBidder;
         address seller;
@@ -199,12 +201,14 @@ contract NFTMarketPlace is
     error AuctionItemNotFound();
     error AddressNotInWhitelist();
     error SelfPurchase();
+    error ZeroAddress();
     error BidderNotFound();
     error HighestBidderCanNotRevertFunds();
     error AmountMustBeGreaterThanZero();
     error InvaildPaymentToken();
     error AddressExistsInWhitelist();
     error FeePercentMustBeA1To1000Number();
+    error SoldOut();
     error OnlyAcceptEthForPayment();
     error OnlyAcceptVegasONEForPayment();
     error OnlyRemovedBySellerOrAdmin();
@@ -217,6 +221,7 @@ contract NFTMarketPlace is
     error AuctionIsNotOver();
     error NoOneBid();
     error OnlyHighestBidderOrSellerCanEnd();
+    error OutOfBounds();
 
     /**
      * Initialize
@@ -301,11 +306,27 @@ contract NFTMarketPlace is
         _;
     }
 
+    /// @dev A modifier which asserts that the perPage & pageId greater than zero.
+    modifier checkPage(uint256 perPage, uint256 pageId) {
+        if (perPage <= 0 || pageId <= 0) {
+            revert OutOfBounds();
+        }
+        _;
+    }
+
     /// @dev A modifier which asserts that the seller for the auction item is the caller.
     modifier checkAuctionSeller(uint256 itemId) {
         AuctionItem memory item = _getAuctionItem(itemId);
         if (item.seller == _msgSender()) {
             revert SelfPurchase();
+        }
+        _;
+    }
+
+    /// @dev A modifier which asserts that address is not a zero address.
+    modifier checkAdress(address account) {
+        if (account == address(0)) {
+            revert ZeroAddress();
         }
         _;
     }
@@ -373,14 +394,13 @@ contract NFTMarketPlace is
     ///
     /// @param time     the time of the auction remaining.
     function setBiddingTime(uint time) external checkAdmin {
-    // TODO restriction of `time`
         _biddingTime = time * 1 days;
     }
 
     /// @dev Withdraws the Eth net profit within the contract to the assigned address.
     ///
-    /// This function reverts if the caller does not have the admin role or if the amount does 
-    /// not exceed ZERO or exceeds `_totalFeeEth`.
+    /// This function reverts if the caller does not have the admin role, if either the amount does 
+    /// not exceed ZERO or exceeds `_totalFeeEth`, or the assigned address is a zero address.
     ///
     /// @param account  the address to withdraw Eth to.
     /// @param amount   the amount of Eth to withdraw.
@@ -388,8 +408,8 @@ contract NFTMarketPlace is
         external
         checkAdmin 
         checkAmount(amount)
+        checkAdress(account)
         nonReentrant 
-    // TODO check 0 address
     {
         if (amount > _totalFeeEth) {
             revert NotEnoughFunds();
@@ -407,8 +427,8 @@ contract NFTMarketPlace is
 
     /// @dev Withdraws the VegasONE net profit balance within the contract to the assigned address.
     ///
-    /// This function reverts if the caller does not have the admin role or if the amount does 
-    /// not exceed ZERO or exceeds `_totalFeeVegasONE`.
+    /// This function reverts if the caller does not have the admin role, if either the amount does 
+    /// not exceed ZERO or exceeds `_totalFeeVegasONE`, or the assigned address is a zero address.
     ///
     /// @param account  the address to withdraw VegasONE to.
     /// @param amount   the amount of VegasONE to withdraw.
@@ -416,8 +436,8 @@ contract NFTMarketPlace is
         external
         checkAdmin 
         checkAmount(amount)
+        checkAdress(account)
         nonReentrant
-    // TODO check 0 Address 
     {
         if (amount > _totalFeeVegasONE) {
             revert NotEnoughFunds();
@@ -469,7 +489,8 @@ contract NFTMarketPlace is
                 tokenId: tokenId,
                 seller: seller,
                 isVegasONE: isVegasONE,
-                price: price
+                price: price,
+                soldOut: false
             })
         );
 
@@ -491,14 +512,14 @@ contract NFTMarketPlace is
         return itemId;
     }
 
-    /// @dev Remove the `itemId` item from the market item.
+    /// @dev Cancel the sale of the `itemId` item from the market item.
     ///
-    /// This function reverts if `itemId` does not exist or if the caller does not the seller or
-    /// does not have the admin role.
+    /// This function reverts if `itemId` does not exist, if either the caller does not the seller or
+    /// does not have the admin role, or the item has been sold.
     ///
     /// @param itemId   the number of the selected item id.
     function removeMarketItem(uint256 itemId) external checkItemExist(itemId){
-        MarketItem memory item = _getItem(itemId);
+        MarketItem storage item = _getItem(itemId);
         address seller = _msgSender();
         if (!hasRole(ADMIN_ROLE, seller)){
             if (seller != item.seller) {
@@ -506,7 +527,11 @@ contract NFTMarketPlace is
             }
         }
 
-        _removeItem(item.seller, item.itemId);
+        if (item.soldOut) {
+            revert SoldOut();
+        }
+
+        item.soldOut = true;
 
         emit RemoveMarketItem(
             item.isVegasONE,
@@ -527,7 +552,7 @@ contract NFTMarketPlace is
     /// @dev Purchase the `itemId` item from the market item using Eth as payment.
     ///
     /// This function reverts if `itemId` does not exist, if either the caller is the seller, 
-    /// or the item is uses VegasONE as the currency.
+    /// or the item is uses VegasONE as the currency, or the item has been sold.
     ///
     /// @param itemId   the number of the selected item id.
     function buyE(uint256 itemId) 
@@ -537,12 +562,15 @@ contract NFTMarketPlace is
         nonReentrant 
         payable 
     {
-        MarketItem memory item = _getItem(itemId);
+        MarketItem storage item = _getItem(itemId);
 
         address buyer = _msgSender();
 
         if (item.isVegasONE) {
             revert OnlyAcceptEthForPayment();
+        }
+        if (item.soldOut) {
+            revert SoldOut();
         }
         require(msg.value == item.price);
 
@@ -552,7 +580,7 @@ contract NFTMarketPlace is
         _totalFeeEth += fee;
         _ownedEth[item.seller] += realPrice;
         
-        _removeItem(item.seller, item.itemId);
+        item.soldOut = true;
 
         emit Buy(
             item.isVegasONE,
@@ -575,7 +603,7 @@ contract NFTMarketPlace is
     /// @dev Purchase the `itemId` item from the market item using VegasONE as payment.
     ///
     /// This function reverts if `itemId` does not exist, if either the caller is the seller, 
-    /// or the item is uses Eth as the currency.
+    /// or the item is uses Eth as the currency, or the item has been sold.
     ///
     /// @param itemId   the number of the selected item id.
     function buyV(uint256 itemId) 
@@ -584,18 +612,20 @@ contract NFTMarketPlace is
         checkSeller(itemId)
         nonReentrant 
     {
-        MarketItem memory item = _getItem(itemId);
+        MarketItem storage item = _getItem(itemId);
 
         address buyer = _msgSender();
 
         if (!item.isVegasONE) {
             revert OnlyAcceptVegasONEForPayment();
         }
-
+        if (item.soldOut) {
+            revert SoldOut();
+        }
         uint256 fee = (item.price * _feePercent) / thousand;
         uint256 realPrice = item.price - fee;
 
-        _removeItem(item.seller, item.itemId);
+        item.soldOut = true;
 
         emit Buy(
             item.isVegasONE,
@@ -624,15 +654,16 @@ contract NFTMarketPlace is
 
     /// @dev Withdraws the caller's Eth balance within the contract to the assigned address.
     ///
-    /// This function reverts if the amount does not exceed ZERO or exceeds the caller's balance.
+    /// This function reverts if the amount does not exceed ZERO or exceeds the caller's balance, or 
+    /// if the assigned address is a zero address.
     ///
     /// @param account  the address to withdraw Eth to.
     /// @param amount   the amount of Eth to withdraw.
     function withdrawEth(address account, uint256 amount) 
         external 
         checkAmount(amount) 
+        checkAdress(account)
         nonReentrant 
-    // TODO check 0 address
     {
         address buyer = _msgSender();
 
@@ -653,15 +684,16 @@ contract NFTMarketPlace is
 
     /// @dev Withdraws the caller's VegasONE balance within the contract to the assigned address.
     ///
-    /// This function reverts if the amount does not exceed ZERO or exceeds the caller's balance.
+    /// This function reverts if the amount does not exceed ZERO or exceeds the caller's balance, or 
+    /// if the assigned address is a zero address.
     ///
     /// @param account  the address to withdraw VegasONE to.
     /// @param amount   the amount of VegasONE to withdraw.
     function withdrawVegasONE(address account, uint256 amount) 
         external 
         checkAmount(amount) 
+        checkAdress(account)
         nonReentrant
-    // TODO check 0 address
     {
         address buyer = _msgSender();
 
@@ -712,7 +744,8 @@ contract NFTMarketPlace is
                 isVegasONE: isVegasONE,
                 auctionStartTime: auctionStartTime,
                 highestBidder: highestBidder,
-                highestPrice: highestPrice
+                highestPrice: highestPrice,
+                soldOut: false
             })
         );
 
@@ -735,29 +768,33 @@ contract NFTMarketPlace is
         return itemId;
     }
 
-    /// @dev Remove the `itemId` item from the auction item.
+    /// @dev Cancel auction for the `itemId` item from the auction item.
     ///
     /// This function reverts if `itemId` does not exist, if either the caller does not the seller or
-    /// does not have the admin role, or the auction item has been bid.
+    /// does not have the admin role, or the auction item has been bid, or the item has been auctioned.
     ///
     /// @param itemId   the number of the selected item id.
     function removeAuctionItem(uint256 itemId) 
         external 
         checkAuctionItemExist(itemId)
     {
-        AuctionItem memory item = _getAuctionItem(itemId);
+        AuctionItem storage item = _getAuctionItem(itemId);
         address seller = _msgSender();
         if (!hasRole(ADMIN_ROLE, seller)){
             if (seller != item.seller) {
                 revert OnlyRemovedBySellerOrAdmin();
             }
         }
+
+        if (item.soldOut){
+            revert SoldOut();
+        }
         
         if (item.highestBidder != address(0)) {
             revert CanNotRemovedWhenHighestBidderExist();
         }
 
-        _removeAuctionItem(item.seller, item.itemId);
+        item.soldOut = true;
 
         emit RemoveAuctionItem(
             item.isVegasONE,
@@ -946,14 +983,19 @@ contract NFTMarketPlace is
     /// @dev Closing auction items after the auction time is over.
     ///
     /// This function reverts if `itemId` does not exist, if either the auction has not ended,
-    /// no one has bid on the auction item, or the caller is not the seller or the highest bidder.
+    /// no one has bid on the auction item, or the caller is not the seller or the highest bidder,
+    /// or the item has been auctioned.
     ///
     /// @param itemId   the number of the selected item id.
     function auctionEnd(uint256 itemId) external nonReentrant checkAuctionItemExist(itemId) {
-        AuctionItem memory item = _getAuctionItem(itemId);
+        AuctionItem storage item = _getAuctionItem(itemId);
 
         if (block.timestamp < item.auctionStartTime + _biddingTime) {
             revert AuctionIsNotOver();
+        }
+
+        if (item.soldOut){
+            revert SoldOut();
         }
 
         if (item.highestBidder == address(0)) {
@@ -967,7 +1009,7 @@ contract NFTMarketPlace is
         uint256 fee = (item.highestPrice * _feePercent) / thousand;
         uint256 realPrice = item.highestPrice - fee;
 
-        _removeAuctionItem(item.seller, item.itemId);
+        item.soldOut = true;
 
         if (item.isVegasONE)
         {   
@@ -1006,14 +1048,14 @@ contract NFTMarketPlace is
     /// @dev Gets the net profit of Eth in market place.
     ///
     /// @return the net profit amount of Eth.
-    function drawableMPEth() external checkAdmin view returns (uint256) {
+    function drawableMPEth() external view returns (uint256) {
         return _totalFeeEth;
     }
 
     /// @dev Gets the VegasONE's net profit balance in market place.
     ///
     /// @return the net profit amount of VegasONE.
-    function drawableMPVegasONE() external checkAdmin view returns (uint256) {
+    function drawableMPVegasONE() external view returns (uint256) {
         return _totalFeeVegasONE;
     }
 
@@ -1034,7 +1076,7 @@ contract NFTMarketPlace is
         return _getItem(itemId);
     }
 
-    /// @dev Get a list of market item details.
+    /// @dev Get a reverse list of market item details.
     ///
     /// @param perPage  the number of market items per page.
     /// @param pageId   the page number of the market item.
@@ -1042,24 +1084,40 @@ contract NFTMarketPlace is
     /// @return list of market item details.
     function listMarketItem(uint256 perPage, uint256 pageId) 
         external 
+        checkPage(perPage, pageId)
         view 
         returns (MarketItem[] memory) 
     {
-        uint256 counter = _items.length;
-        uint256 idCounter = perPage * (pageId - 1) + 1;
+        uint256 startId;
+        uint256 endId;
+        uint256 counter = 0;
 
-        MarketItem[] memory ret = new MarketItem[](perPage);
+        MarketItem[] memory ret;
 
-        for (uint256 i = 0; i < perPage; i++) {
-            if (idCounter <= counter) {
-                ret[i] = _getItem(idCounter);
-                idCounter++;
-            }
+        if (_items.length > (perPage * (pageId - 1))) {
+            startId = _items.length - (perPage * (pageId - 1));
+        } else if (_items.length == 0) {
+            return ret;
+        } else {
+            revert OutOfBounds();
+        }
+
+        if (startId > perPage) {
+            endId = startId - perPage + 1;
+        } else {
+            endId = 1;
+        }
+
+        ret = new MarketItem[](startId - endId + 1);
+
+        for (uint256 i = startId; i >= endId ; i--) {
+            ret[counter] = _getItem(i);
+            counter++;
         }
         return ret;
     }
 
-    /// @dev Get a list of market item details owned by the address.
+    /// @dev Get a reverse list of market item details owned by the address.
     ///
     /// @param seller   the address to retrieve.
     /// @param perPage  the number of market items per page.
@@ -1068,21 +1126,42 @@ contract NFTMarketPlace is
     /// @return list of market item details owned by the address.
     function listMarketItemOf(address seller, uint256 perPage, uint256 pageId)
         external
+        checkPage(perPage, pageId)
         view
         returns (MarketItem[] memory)
     {
-        uint256 counter = _ownedItems[seller].length;
-        uint256 idCounter = (perPage * (pageId - 1));
+        uint256 startId;
+        uint256 endId;
+        uint256 itemId;
+        uint256 counter = 0;
 
-        MarketItem[] memory ret = new MarketItem[](perPage);
+        MarketItem[] memory ret;
 
-        for (uint256 i = 0; i < perPage; i++) {
-            if (idCounter < counter) {
-                uint256 itemId = _ownedItems[seller][idCounter];
-                ret[i] = _getItem(itemId);
-                idCounter++;
+        if (_ownedItems[seller].length > (perPage * (pageId - 1))) {
+            startId = _ownedItems[seller].length - 1 - (perPage * (pageId - 1));
+        } else if (_ownedItems[seller].length == 0) {
+            return ret;
+        } else {
+            revert OutOfBounds();
+        }
+
+        if (startId + 1 > perPage) {
+            endId = startId - perPage + 1;
+        } else {
+            endId = 0;
+        }
+        
+        ret = new MarketItem[](startId - endId + 1);
+
+        for (uint256 i = startId; i >= endId; i--) {
+            itemId = _ownedItems[seller][i];
+            ret[counter] = _getItem(itemId);
+            counter++;
+            if (i == endId) {
+                break;
             }
         }
+        
         return ret;
     }
 
@@ -1116,7 +1195,7 @@ contract NFTMarketPlace is
         return _getAuctionItem(itemId);
     }
 
-    /// @dev Get a list of auction item details.
+    /// @dev Get a reverse list of auction item details.
     ///
     /// @param perPage  the number of auction items per page.
     /// @param pageId   the page number of the auction item.
@@ -1124,24 +1203,40 @@ contract NFTMarketPlace is
     /// @return list of auction item details.
     function listAuctionItem(uint256 perPage, uint256 pageId) 
         external 
+        checkPage(perPage, pageId)
         view 
         returns (AuctionItem[] memory)
     {
-        uint256 counter = _auctionItems.length;
-        uint256 idCounter = perPage * (pageId - 1) + 1;
+        uint256 startId;
+        uint256 endId;
+        uint256 counter = 0;
 
-        AuctionItem[] memory ret = new AuctionItem[](perPage);
+        AuctionItem[] memory ret;
 
-        for (uint256 i = 0; i < perPage; i++) {
-            if (idCounter <= counter) {
-                ret[i] = _getAuctionItem(idCounter);
-                idCounter++;
-            }
+        if (_auctionItems.length > (perPage * (pageId - 1))) {
+            startId = _auctionItems.length - (perPage * (pageId - 1));
+        } else if (_auctionItems.length == 0) {
+            return ret;
+        } else {
+            revert OutOfBounds();
+        }
+
+        if (startId > perPage) {
+            endId = startId - perPage + 1;
+        } else {
+            endId = 1;
+        }
+
+        ret = new AuctionItem[](startId - endId + 1);
+
+        for (uint256 i = startId; i >= endId ; i--) {
+            ret[counter] = _getAuctionItem(i);
+            counter++;
         }
         return ret;
     }
 
-    /// @dev Get a list of auction item details owned by the address.
+    /// @dev Get a reverse list of auction item details owned by the address.
     ///
     /// @param seller   the address to retrieve.
     /// @param perPage  the number of auction items per page.
@@ -1150,21 +1245,42 @@ contract NFTMarketPlace is
     /// @return list of auction item details owned by the address.
     function listAuctionItemOf(address seller, uint256 perPage, uint256 pageId)
         external
+        checkPage(perPage, pageId)
         view
         returns (AuctionItem[] memory)
     {
-        uint256 counter = _ownedAuctionItems[seller].length;
-        uint256 idCounter = (perPage * (pageId - 1));
+        uint256 startId;
+        uint256 endId;
+        uint256 itemId;
+        uint256 counter = 0;
 
-        AuctionItem[] memory ret = new AuctionItem[](perPage);
+        AuctionItem[] memory ret;
 
-        for (uint256 i = 0; i < perPage; i++) {
-            if (idCounter < counter) {
-                uint256 itemId = _ownedAuctionItems[seller][idCounter];
-                ret[i] = _getAuctionItem(itemId);
-                idCounter++;
+        if (_ownedAuctionItems[seller].length > (perPage * (pageId - 1))) {
+            startId = _ownedAuctionItems[seller].length - (perPage * (pageId - 1)) - 1;
+        } else if (_ownedAuctionItems[seller].length == 0) {
+            return ret;
+        } else {
+            revert OutOfBounds();
+        }
+
+        if (startId + 1 > perPage) {
+            endId = startId - perPage + 1;
+        } else {
+            endId = 0;
+        }
+        
+        ret = new AuctionItem[](startId - endId + 1);
+
+        for (uint256 i = startId; i >= endId ; i--) {
+            itemId = _ownedAuctionItems[seller][i];
+            ret[counter] = _getAuctionItem(itemId);
+            counter++;
+            if (i == endId) {
+                break;
             }
         }
+        
         return ret;
     }
 
@@ -1257,16 +1373,6 @@ contract NFTMarketPlace is
         _addOwnedItem(newItem.seller, newItem.itemId);
     }
 
-    /// @dev remove an item from the market item by item id.
-    ///
-    /// @param seller   the address of the caller.
-    /// @param itemId   the number of the selected item id.
-    function _removeItem(address seller, uint256 itemId) internal {
-        _removeOwnedItem(seller, itemId);
-        _removeMainItem(itemId);
-        delete _itemsExist[itemId];
-    }
-
     /// @dev store item details into the storage array of market item.
     ///
     /// @param newItem  the struct of the `MarketItem`.
@@ -1286,41 +1392,6 @@ contract NFTMarketPlace is
         _ownedItemsIndex[newItemId] = newIndex;
     }
 
-    /// @dev remove item details from the storage array of market item by item id.
-    ///
-    /// @param itemId   the number of the selected item id.
-    function _removeMainItem(uint256 itemId) internal {
-        uint256 targetIndex = _itemsIndex[itemId];
-        uint256 lastIndex = _items.length - 1;
-
-        if (targetIndex != lastIndex) {
-            MarketItem storage lastItem = _items[lastIndex];
-            _items[targetIndex] = lastItem;
-            _itemsIndex[lastItem.itemId] = targetIndex;
-        }
-
-        delete _itemsIndex[itemId];
-        _items.pop();
-    }
-
-    /// @dev remove item details from the user's storage array of market item by item id.
-    ///
-    /// @param seller   the address of the caller.
-    /// @param itemId   the number of the selected item id.
-    function _removeOwnedItem(address seller, uint256 itemId) internal {
-        uint256 targetIndex = _ownedItemsIndex[itemId];
-        uint256 lastIndex = _ownedItems[seller].length - 1;
-
-        if (targetIndex != lastIndex) {
-            uint256 lastItemId = _ownedItems[seller][lastIndex];
-            _ownedItems[seller][targetIndex] = lastItemId;
-            _ownedItemsIndex[lastItemId] = targetIndex;
-        }
-
-        delete _ownedItemsIndex[itemId];
-        _ownedItems[seller].pop();
-    }
-
     /// @dev add an item to auction item.
     ///
     /// @param newItem  the struct of the `AuctionItem`.
@@ -1328,16 +1399,6 @@ contract NFTMarketPlace is
         _auctionItemsExist[newItem.itemId] = true;
         _addMainAuctionItem(newItem);
         _addOwnedAuctionItem(newItem.seller, newItem.itemId);
-    }
-
-    /// @dev remove an item from the auction item by item id.
-    ///
-    /// @param seller   the address of the caller.
-    /// @param itemId   the number of the selected item id.
-    function _removeAuctionItem(address seller, uint256 itemId) internal {
-        _removeOwnedAuctionItem(seller, itemId);
-        _removeMainAuctionItem(itemId);
-        delete _auctionItemsExist[itemId];
     }
 
     /// @dev store item details into the storage array of auction item.
@@ -1359,41 +1420,6 @@ contract NFTMarketPlace is
         _ownedAuctionItemsIndex[newItemId] = newIndex;
     }
 
-    /// @dev remove item details from the storage array of auction item by item id.
-    ///
-    /// @param itemId   the number of the selected item id.
-    function _removeMainAuctionItem(uint256 itemId) internal {
-        uint256 targetIndex = _auctionItemsIndex[itemId];
-        uint256 lastIndex = _auctionItems.length - 1;
-
-        if (targetIndex != lastIndex) {
-            AuctionItem storage lastItem = _auctionItems[lastIndex];
-            _auctionItems[targetIndex] = lastItem;
-            _auctionItemsIndex[lastItem.itemId] = targetIndex;
-        }
-
-        delete _auctionItemsIndex[itemId];
-        _auctionItems.pop();
-    }
-
-    /// @dev remove item details from the user's storage array of auction item by item id.
-    ///
-    /// @param seller   the address of the caller.
-    /// @param itemId   the number of the selected item id.
-    function _removeOwnedAuctionItem(address seller, uint256 itemId) internal {
-        uint256 targetIndex = _ownedAuctionItemsIndex[itemId];
-        uint256 lastIndex = _ownedAuctionItems[seller].length - 1;
-
-        if (targetIndex != lastIndex) {
-            uint256 lastItemId = _ownedAuctionItems[seller][lastIndex];
-            _ownedAuctionItems[seller][targetIndex] = lastItemId;
-            _ownedAuctionItemsIndex[lastItemId] = targetIndex;
-        }
-
-        delete _ownedAuctionItemsIndex[itemId];
-        _ownedAuctionItems[seller].pop();
-    }
-    
     /// @dev Get whether the item exists from market item.
     ///
     /// @param itemId   the number of the selected item id.
