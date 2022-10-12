@@ -4,7 +4,7 @@
 
 - feat: add marketitemcount & auctionitemcount (#1)
 
-> - Add marketitemcount and auctionitemcount functions.
+> - Add marketItemCount and auctionItemCount functions.
 
 - feat: add code comment (#3)
 
@@ -12,10 +12,10 @@
 
 - Feature/marketplace (#4)
 
-> - Add some checks.
-> - Modify the MarketItem and AuctionItem data structures to add soldOut boolean parameters to them.
-> - Change all list functions to reverse.
-> - Modifying the remove related functions to no longer delete item, but adjusts the item parameter soldOut to true.
+> - Add zero address check, sold out check and out of bounds check.
+> - Add soldOut field into MarketItem and AuctionItem struct.
+> - Descending all list functions.
+> - The remove-related functions now sets soldOut field to true instead of delete items permanently.
 
 <br />
 
