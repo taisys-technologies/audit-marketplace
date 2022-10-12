@@ -1,5 +1,26 @@
 # audit-marketplace
 
+## Change record
+
+- feat: add marketitemcount & auctionitemcount (#1)
+
+> - Add marketItemCount and auctionItemCount functions.
+
+- feat: add code comment (#3)
+
+> - Add code comments.
+
+- Feature/marketplace (#4)
+
+> - Add zero address check, sold out check and out of bounds check.
+> - Add soldOut field into MarketItem and AuctionItem struct.
+> - Descending all list functions.
+> - The remove-related functions now sets soldOut field to true instead of delete items permanently.
+
+<br />
+
+## Overview
+
 The purpose of this contract is to provide a platform where NFTs of whitelisted contracts can be listed for sale and NFT auctions.
 
 Currently, ETH and VEGASONE are supported currencies for transactions.
@@ -7,6 +28,8 @@ Currently, ETH and VEGASONE are supported currencies for transactions.
 For each successfully executed transactions, a specified percentage cut is taken for the sale amount.
 
 The following are explanations for some user scenarios and the contract functions.
+
+<br />
 
 ## Contract Scenario Description
 
@@ -34,7 +57,7 @@ After the auction time expires, the seller or the highest bidder can end the auc
 
 Funds from non-highest bidders can then be withdrawn.
 
-The relative methods are `bidE`, `bidV`, `withdrawEth`, `withdrawVegasONE`, `revertBidEth`, and `revertBidVegasONE`.
+The relative methods are `auctionEnd`, `bidE`, `bidV`, `withdrawEth`, `withdrawVegasONE`, `revertBidEth`, and `revertBidVegasONE`.
 
 <br />
 

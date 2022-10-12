@@ -1076,7 +1076,7 @@ contract NFTMarketPlace is
         return _getItem(itemId);
     }
 
-    /// @dev Get a reverse list of market item details.
+    /// @dev Get a descending list of market item details.
     ///
     /// @param perPage  the number of market items per page.
     /// @param pageId   the page number of the market item.
@@ -1117,7 +1117,7 @@ contract NFTMarketPlace is
         return ret;
     }
 
-    /// @dev Get a reverse list of market item details owned by the address.
+    /// @dev Get a descending list of market item details owned by the address.
     ///
     /// @param seller   the address to retrieve.
     /// @param perPage  the number of market items per page.
@@ -1195,7 +1195,7 @@ contract NFTMarketPlace is
         return _getAuctionItem(itemId);
     }
 
-    /// @dev Get a reverse list of auction item details.
+    /// @dev Get a descending list of auction item details.
     ///
     /// @param perPage  the number of auction items per page.
     /// @param pageId   the page number of the auction item.
@@ -1236,7 +1236,7 @@ contract NFTMarketPlace is
         return ret;
     }
 
-    /// @dev Get a reverse list of auction item details owned by the address.
+    /// @dev Get a descending list of auction item details owned by the address.
     ///
     /// @param seller   the address to retrieve.
     /// @param perPage  the number of auction items per page.
