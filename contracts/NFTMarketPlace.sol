@@ -42,7 +42,7 @@ contract NFTMarketPlace is
         address nftContract;
         address highestBidder;
         address seller;
-        uint256 auctionStartTime;
+        uint auctionStartTime;
         uint256 itemId;
         uint256 tokenId;
         uint256 highestPrice;
@@ -99,7 +99,7 @@ contract NFTMarketPlace is
         bool isVegasONE,
         address nftContract,
         address indexed seller,
-        uint256 auctionStartTime,
+        uint auctionStartTime,
         uint256 indexed itemId,
         uint256 tokenId,
         uint256 price
@@ -109,7 +109,7 @@ contract NFTMarketPlace is
         bool isVegasONE,
         address nftContract,
         address indexed seller,
-        uint256 auctionStartTime,
+        uint auctionStartTime,
         uint256 indexed itemId,
         uint256 tokenId,
         uint256 price
@@ -137,7 +137,7 @@ contract NFTMarketPlace is
         address nftContract,
         address seller,
         address indexed buyer,
-        uint256 auctionEndTime,
+        uint auctionEndTime,
         uint256 indexed itemId,
         uint256 tokenId,
         uint256 price,
@@ -163,7 +163,7 @@ contract NFTMarketPlace is
 
     uint256 constant thousand = 1000;
     address[] private _whiteliste;
-    uint256 private _biddingTime;
+    uint private _biddingTime;
     IERC20Upgradeable private _paymentToken;
     uint256 private _feePercent;
     uint256 private _totalFeeEth;
@@ -235,7 +235,7 @@ contract NFTMarketPlace is
     function initialize(
         address newPaymentToken,
         uint256 newFeePercent,
-        uint256 newBiddingTime
+        uint newBiddingTime
     ) public initializer {
         __Pausable_init();
         __AccessControl_init();
@@ -393,7 +393,7 @@ contract NFTMarketPlace is
     /// This function reverts if the caller does not have the admin role.
     ///
     /// @param time     the time of the auction remaining.
-    function setBiddingTime(uint256 time) external checkAdmin {
+    function setBiddingTime(uint time) external checkAdmin {
         _biddingTime = time * 1 days;
     }
 
@@ -404,19 +404,18 @@ contract NFTMarketPlace is
     ///
     /// @param account  the address to withdraw Eth to.
     /// @param amount   the amount of Eth to withdraw.
-    function withdrawMPEth(address payable account, uint256 amount)
+    function withdrawMPEth(address account, uint256 amount) 
         external
-        checkAdmin
+        checkAdmin 
         checkAmount(amount)
         checkAdress(account)
-        nonReentrant
+        nonReentrant 
     {
         if (amount > _totalFeeEth) {
             revert NotEnoughFunds();
         }
         _totalFeeEth -= amount;
-        (bool success, ) = account.call{value:amount}("");
-        require(success, "Transfer failed.");
+        payable(account).transfer(amount);
 
         emit WithdrawMP(
             false,
@@ -433,9 +432,9 @@ contract NFTMarketPlace is
     ///
     /// @param account  the address to withdraw VegasONE to.
     /// @param amount   the amount of VegasONE to withdraw.
-    function withdrawMPVegasONE(address account, uint256 amount)
+    function withdrawMPVegasONE(address account, uint256 amount) 
         external
-        checkAdmin
+        checkAdmin 
         checkAmount(amount)
         checkAdress(account)
         nonReentrant
@@ -472,12 +471,12 @@ contract NFTMarketPlace is
         uint256 tokenId,
         uint256 price,
         bool isVegasONE
-    )
-        external
-        checkWhitelist(nftContract)
-        checkAmount(price)
+    ) 
+        external 
+        checkWhitelist(nftContract) 
+        checkAmount(price) 
         returns (uint256)
-    {
+    {        
         address seller = _msgSender();
 
         _itemIdCounter.increment();
@@ -519,7 +518,7 @@ contract NFTMarketPlace is
     /// does not have the admin role, or the item has been sold.
     ///
     /// @param itemId   the number of the selected item id.
-    function removeMarketItem(uint256 itemId) external checkItemExist(itemId) {
+    function removeMarketItem(uint256 itemId) external checkItemExist(itemId){
         MarketItem storage item = _getItem(itemId);
         address seller = _msgSender();
         if (!hasRole(ADMIN_ROLE, seller)){
@@ -556,12 +555,12 @@ contract NFTMarketPlace is
     /// or the item is uses VegasONE as the currency, or the item has been sold.
     ///
     /// @param itemId   the number of the selected item id.
-    function buyE(uint256 itemId)
-        external
-        checkItemExist(itemId)
+    function buyE(uint256 itemId) 
+        external 
+        checkItemExist(itemId) 
         checkSeller(itemId)
-        nonReentrant
-        payable
+        nonReentrant 
+        payable 
     {
         MarketItem storage item = _getItem(itemId);
 
@@ -607,11 +606,11 @@ contract NFTMarketPlace is
     /// or the item is uses Eth as the currency, or the item has been sold.
     ///
     /// @param itemId   the number of the selected item id.
-    function buyV(uint256 itemId)
-        external
+    function buyV(uint256 itemId) 
+        external 
         checkItemExist(itemId)
         checkSeller(itemId)
-        nonReentrant
+        nonReentrant 
     {
         MarketItem storage item = _getItem(itemId);
 
@@ -660,11 +659,11 @@ contract NFTMarketPlace is
     ///
     /// @param account  the address to withdraw Eth to.
     /// @param amount   the amount of Eth to withdraw.
-    function withdrawEth(address payable account, uint256 amount)
-        external
-        checkAmount(amount)
+    function withdrawEth(address account, uint256 amount) 
+        external 
+        checkAmount(amount) 
         checkAdress(account)
-        nonReentrant
+        nonReentrant 
     {
         address buyer = _msgSender();
 
@@ -672,8 +671,7 @@ contract NFTMarketPlace is
             revert NotEnoughFunds();
         }
         _ownedEth[buyer] -= amount;
-        (bool success, ) = account.call{value:amount}("");
-        require(success, "Transfer failed.");
+        payable(account).transfer(amount);
         
 
         emit Withdraw(
@@ -691,9 +689,9 @@ contract NFTMarketPlace is
     ///
     /// @param account  the address to withdraw VegasONE to.
     /// @param amount   the amount of VegasONE to withdraw.
-    function withdrawVegasONE(address account, uint256 amount)
-        external
-        checkAmount(amount)
+    function withdrawVegasONE(address account, uint256 amount) 
+        external 
+        checkAmount(amount) 
         checkAdress(account)
         nonReentrant
     {
@@ -725,15 +723,15 @@ contract NFTMarketPlace is
         uint256 tokenId,
         bool isVegasONE
     ) 
-        external checkWhitelist(nftContract)
-        returns (uint256)
+        external checkWhitelist(nftContract) 
+        returns (uint256) 
     {        
         address seller = _msgSender();
 
         _auctionItemsIdCounter.increment();
         uint256 itemId = _auctionItemsIdCounter.current();
 
-        uint256 auctionStartTime = block.timestamp;
+        uint auctionStartTime = block.timestamp;
         address highestBidder = address(0);
         uint256 highestPrice = 0;
 
@@ -776,8 +774,8 @@ contract NFTMarketPlace is
     /// does not have the admin role, or the auction item has been bid, or the item has been auctioned.
     ///
     /// @param itemId   the number of the selected item id.
-    function removeAuctionItem(uint256 itemId)
-        external
+    function removeAuctionItem(uint256 itemId) 
+        external 
         checkAuctionItemExist(itemId)
     {
         AuctionItem storage item = _getAuctionItem(itemId);
@@ -825,10 +823,10 @@ contract NFTMarketPlace is
     /// @param itemId   the number of the selected item id.
     /// @param price    the price of the bid or increase.
     function bidV(uint256 itemId, uint256 price)
-        external
-        checkAuctionItemExist(itemId)
+        external 
+        checkAuctionItemExist(itemId) 
         checkAuctionSeller(itemId)
-        nonReentrant
+        nonReentrant 
     {
         AuctionItem storage item = _getAuctionItem(itemId);
         
@@ -880,9 +878,9 @@ contract NFTMarketPlace is
     /// or the privce does not exceed the highest price.
     ///
     /// @param itemId   the number of the selected item id.
-    function bidE(uint256 itemId)
-        external
-        checkAuctionItemExist(itemId)
+    function bidE(uint256 itemId) 
+        external 
+        checkAuctionItemExist(itemId) 
         checkAuctionSeller(itemId)
         nonReentrant
         payable
@@ -959,10 +957,10 @@ contract NFTMarketPlace is
     ///
     /// @param account  the address to withdraw Eth to.
     /// @param itemId   the number of the selected item id.
-    function revertBidEth(address payable account,uint256 itemId) 
-        external
-        checkAuctionBidder(itemId)
-        nonReentrant
+    function revertBidEth(address account,uint256 itemId) 
+        external 
+        checkAuctionBidder(itemId) 
+        nonReentrant 
     {
         address buyer = _msgSender();
         uint256 _balance = _ownedBidEth[buyer][itemId];
@@ -972,8 +970,7 @@ contract NFTMarketPlace is
         }
 
         _ownedBidEth[buyer][itemId] = 0;
-        (bool success, ) = account.call{value:_balance}("");
-        require(success, "Transfer failed.");
+        payable(account).transfer(_balance);
 
         emit RevertBid(
             buyer,
@@ -990,11 +987,7 @@ contract NFTMarketPlace is
     /// or the item has been auctioned.
     ///
     /// @param itemId   the number of the selected item id.
-    function auctionEnd(uint256 itemId) 
-        external
-        nonReentrant
-        checkAuctionItemExist(itemId)
-    {
+    function auctionEnd(uint256 itemId) external nonReentrant checkAuctionItemExist(itemId) {
         AuctionItem storage item = _getAuctionItem(itemId);
 
         if (block.timestamp < item.auctionStartTime + _biddingTime) {
@@ -1026,8 +1019,7 @@ contract NFTMarketPlace is
         } else {
             _totalFeeEth += fee;
             _ownedBidEth[item.highestBidder][item.itemId] = 0;
-            (bool success, ) = payable(item.seller).call{value:realPrice}("");
-            require(success, "Transfer failed.");
+            payable(item.seller).transfer(realPrice);
         }
 
         emit AuctionEnd(
@@ -1091,10 +1083,10 @@ contract NFTMarketPlace is
     ///
     /// @return list of market item details.
     function listMarketItem(uint256 perPage, uint256 pageId) 
-        external
+        external 
         checkPage(perPage, pageId)
-        view
-        returns (MarketItem[] memory)
+        view 
+        returns (MarketItem[] memory) 
     {
         uint256 startId;
         uint256 endId;
@@ -1364,7 +1356,7 @@ contract NFTMarketPlace is
     /// @dev Get auction duration.
     ///
     /// @return the number of the auction durations.
-    function biddingTime() external view returns (uint256) {
+    function biddingTime() external view returns (uint) {
         return _biddingTime;
     }
 
