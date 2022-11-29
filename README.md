@@ -180,6 +180,7 @@ Withdraws the VegasONE net profit balance within the contract to the assigned ad
 ## Document
 
 - [Notion](https://nonstop-krypton-90d.notion.site/Taisys-MarketPlace-de62136794df4d4b8bbe14708e508fa2)
+- [Audit Report](./audit/)
 
 ## Test
 
@@ -202,7 +203,7 @@ npx hardhat test ${TEST_FILE_PATH}
 npx hardhat coverage
 ```
 
-### Static Analysis
+## Static Analysis
 
 - [Slither Github](https://github.com/crytic/slither)
 
