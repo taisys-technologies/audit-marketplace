@@ -1,4 +1,4 @@
-# audit-marketplace
+# Audit Marketplace
 
 ## Change record
 
@@ -36,7 +36,7 @@ The following are explanations for some user scenarios and the contract function
 - Listing process
 
 Only NFTs of whitelisted contracts can be listed as a market item; only the item seller or administrators can cancel the sale.
-The relative methods are `createMarketItem`, `createAuctionItem`, `removeMarketItem`,  and `removeAuctionItem`.
+The relative methods are `createMarketItem`, `createAuctionItem`, `removeMarketItem`, and `removeAuctionItem`.
 
 <br />
 
@@ -176,3 +176,36 @@ Withdraws the Eth net profit within the contract to the assigned address.
 - withdrawMPVegasONE **onlyAdmin**
 
 Withdraws the VegasONE net profit balance within the contract to the assigned address.
+
+## Document
+
+- [Notion](https://nonstop-krypton-90d.notion.site/Taisys-MarketPlace-de62136794df4d4b8bbe14708e508fa2)
+
+## Test
+
+### Setup
+
+```bash
+npm install
+```
+
+### Run
+
+```bash
+# run all tests
+npx hardhat test
+
+# run single test
+npx hardhat test ${TEST_FILE_PATH}
+
+# run tests with coverage report
+npx hardhat coverage
+```
+
+### Static Analysis
+
+- [Slither Github](https://github.com/crytic/slither)
+
+```bash
+slither .
+```
